@@ -1,0 +1,447 @@
+
+ 
+[duplicate_pin_override]
+pins: PB4,PK5
+
+[heater_fan _extruder_fan]
+pin: PL5
+
+[heater_bed]
+heater_pin: PH5
+sensor_type: EPCOS 100K B57560G104F
+sensor_pin: PK6
+#control: pid
+#pid_Kp: 74.883
+#pid_Ki: 1.809
+#pid_Kd: 775.038
+min_temp: 0
+max_temp: 120
+
+[verify_heater heater_bed]
+max_error: 80
+check_gain_time: 30
+hysteresis: 5
+heating_gain: 2
+
+
+[fan]
+pin: PH6
+
+[mcu]
+serial: /dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0
+
+[printer]
+kinematics: cartesian
+max_velocity: 300
+max_accel: 2000
+max_z_velocity: 10
+max_z_accel: 60
+
+[heater_fan _stepstick_fan]
+pin: PH4
+
+[temperature_sensor CPU]
+sensor_type: temperature_host
+min_temp: 10
+max_temp: 85
+
+
+
+[idle_timeout]
+timeout: 90
+gcode:
+   TURN_OFF_HEATERS
+   M84
+   PRINT_END
+
+
+[exclude_object] 
+
+[include mainsail.cfg]
+
+[virtual_sdcard]
+path: /home/pi/printer_data/gcodes
+
+[display_status]
+
+[pause_resume]
+recover_velocity: 50
+
+[stepper_x]
+step_pin: PF0
+dir_pin: PF1
+enable_pin: !PD7
+microsteps: 32
+rotation_distance: 40.25
+endstop_pin: ^!PE5
+position_min = -15
+position_endstop = -5
+position_max = 220
+homing_speed: 40
+
+[stepper_y]
+step_pin: PF6
+dir_pin: PF7
+enable_pin: !PF2
+microsteps: 32
+rotation_distance: 40.25
+endstop_pin: !PL7
+position_endstop = 5
+position_max = 220
+homing_speed: 40
+
+##############################################################################################################
+
+[stepper_z]
+step_pin: PL3
+dir_pin: PL1
+enable_pin: !PK0
+microsteps: 16
+rotation_distance: 8.15
+#position_endstop: 0.0
+position_min: -5
+position_max: 200
+homing_speed: 5.0
+
+## for 3dtouch. comment for mannual mesh bed leveling
+endstop_pin = probe:z_virtual_endstop
+## uncomment below for manual mesh bed leveling and to enable Z limit switches
+#endstop_pin = ^!PD3
+#position_endstop = 0.0
+
+[bltouch] 
+sensor_pin = ^PE4
+control_pin = PB5  
+x_offset = -1
+y_offset = -24
+#z_offset = 0  # larger number = closer to bed
+pin_up_touch_mode_reports_triggered: True
+pin_move_time: 1
+samples_tolerance: .1 #how much of a difference there can be before it triggers a retest, there is a default if you don't specify
+samples_tolerance_retries: 3 #how many times you want it to retry before failing.
+stow_on_each_sample: True
+
+
+[bed_mesh]  
+speed = 100
+horizontal_move_z = 5  
+mesh_min = 30, 30
+mesh_max = 190,190  
+probe_count = 4,4  
+fade_start = 1.0  
+fade_end = 8.0  
+algorithm = bicubic
+
+
+[safe_z_home]
+home_xy_position: 110, 110
+speed: 60
+z_hop: 7      # Move up ??mm
+z_hop_speed: 7
+
+[gcode_macro G29]
+gcode:
+  G28
+  BED_MESH_CLEAR
+  BED_MESH_CALIBRATE
+  SAVE_CONFIG
+
+[gcode_macro BED_PROFILE]
+gcode:
+  BED_MESH_PROFILE LOAD=default
+
+#PROBE CALIBRATE
+[gcode_macro CALIBRATE_Z]
+gcode:
+  G28
+  PROBE_CALIBRATE
+
+######################################################################################################################
+
+[extruder]
+max_extrude_only_velocity: 50
+max_extrude_only_distance: 500
+max_extrude_cross_section: 4
+pressure_advance: 0.050
+pressure_advance_smooth_time: 0.025
+step_pin: PC1
+dir_pin: PC3
+enable_pin: !PC7
+microsteps: 16
+rotation_distance: 8.15
+nozzle_diameter: 0.400
+filament_diameter: 1.750
+heater_pin: PB4
+sensor_type: ATC Semitec 104GT-2
+sensor_pin: PK5
+#control: pid
+#pid_Kp: 15.717
+#pid_Ki: 0.569
+#pid_Kd: 108.451
+min_extrude_temp: 190
+min_temp: 0
+max_temp: 260
+
+[extruder_stepper extruder1]
+extruder: 
+step_pin: PA4
+dir_pin: PA6
+enable_pin: !PA2
+microsteps: 16
+rotation_distance: 8.15
+
+[firmware_retraction]
+retract_length: 3
+retract_speed: 40
+unretract_extra_length: 0
+unretract_speed: 10
+
+[verify_heater extruder]
+max_error: 120
+check_gain_time: 25
+hysteresis: 8
+heating_gain: 2
+
+
+
+
+
+###########################################################################################
+
+
+
+[gcode_macro EMERGENCY_STOP]
+  gcode:
+   G91
+   G1 Z5
+   UNLOAD
+   { action_emergency_stop() }
+
+
+
+[gcode_macro PAUSE]
+description: Pause the actual running print
+rename_existing: PAUSE_BASE
+gcode:
+  PAUSE_BASE 
+
+
+
+[gcode_macro G28]
+rename_existing: C28
+gcode: 
+  M80
+  C28{' X=X' if params.X is defined}{' Y=Y' if params.Y is defined}{' Z=Z' if params.Z is defined}
+
+
+[gcode_macro POWER_ON_PRINTER]
+gcode:
+  {action_call_remote_method("set_device_power",
+                             device="printer",
+                             state="on")}
+   G28 X 
+   M84
+
+
+[gcode_macro RESUME]
+description: Resume the actual running print
+rename_existing: RESUME_BASE
+gcode:
+  ##### read extrude from  _TOOLHEAD_PARK_PAUSE_CANCEL  macro #####
+  {% set extrude = printer['gcode_macro _TOOLHEAD_PARK_PAUSE_CANCEL'].extrude %}
+  #### get VELOCITY parameter if specified ####
+  {% if 'VELOCITY' in params|upper %}
+    {% set get_params = ('VELOCITY=' + params.VELOCITY)  %}
+  {%else %}
+    {% set get_params = "" %}
+  {% endif %}
+  ##### end of definitions #####
+  {% if printer.extruder.can_extrude|lower == 'true' %}
+    M83
+    G1 E{extrude} F2100
+    {% if printer.gcode_move.absolute_extrude |lower == 'true' %} M82 {% endif %}
+  {% else %}
+    {action_respond_info("Extruder not hot enough")}
+  {% endif %}
+  RESUME_BASE {get_params}
+
+[gcode_macro M80]
+gcode:
+  # Moonraker action
+  {action_call_remote_method('set_device_power',
+                             device='printer',
+                             state='on')}
+
+[gcode_macro M81]
+gcode:
+   TURN_OFF_HEATERS
+   M84
+  {action_call_remote_method("set_device_power",
+                             device="printer",
+                             state="off")}
+[gcode_macro MOTORS_OFF]
+gcode:
+ M84
+
+
+
+[gcode_macro POWER_OFF_PRINTER]
+gcode:
+ #  {action_respond_info("Getting ready to power down...")}
+   TURN_OFF_HEATERS
+   M84
+  {action_call_remote_method("set_device_power",
+                             device="printer",
+                             state="off")} 
+
+[gcode_macro Cancel]
+gcode:
+ G91
+ G1 Z5
+ UNLOAD
+ G90
+ G0 X0 Y190 F2000
+ M84
+ PRINT_END
+
+
+
+[delayed_gcode POWER_OFF_PRINTER_CHECK]
+gcode:
+  {% if printer.idle_timeout.state == "Idle" or printer.idle_timeout.state == "Ready" %}
+    {% if printer.extruder.temperature < 50.0 and printer.heater_bed.temperature < 50.0 %}
+        {% if printer.extruder.target == 0.0 and printer.heater_bed.target == 0.0 %}
+            UPDATE_DELAYED_GCODE ID=POWER_OFF_PRINTER_CHECK DURATION=0
+            POWER_OFF_PRINTER
+        {% else %}
+            UPDATE_DELAYED_GCODE ID=POWER_OFF_PRINTER_CHECK DURATION=2
+        {% endif %}
+    {% else %}
+        {% if printer.idle_timeout.state == "Printing" %}
+            UPDATE_DELAYED_GCODE ID=POWER_OFF_PRINTER_CHECK DURATION=0
+            {% else %}
+            {% if printer.extruder.target == 0.0 and printer.heater_bed.target == 0.0 %}
+                UPDATE_DELAYED_GCODE ID=POWER_OFF_PRINTER_CHECK DURATION=2
+            {% else %}
+                UPDATE_DELAYED_GCODE ID=POWER_OFF_PRINTER_CHECK DURATION=0
+              {% endif %}
+        {% endif %}
+    {% endif %}
+  {% endif %}
+
+[gcode_macro EXTRUDER_RESET]
+gcode:
+ M109 S190
+ T1
+ UNLOAD
+ T0
+ LOAD_FILAMENT
+ M104 S0
+
+[gcode_macro PRINT_END]
+gcode:
+ T0
+ UPDATE_DELAYED_GCODE ID=POWER_OFF_PRINTER_CHECK DURATION=10 
+
+
+[gcode_macro M600]
+gcode:
+  PAUSE_MACRO
+
+[gcode_macro PAUSE_MACRO]
+gcode:
+  PAUSE
+
+[gcode_macro LOAD_FILAMENT]
+gcode:
+  M117  LOADING...
+  G91
+  G1 E110 F750
+  G90
+
+[gcode_macro UNLOAD]
+gcode:
+  G91
+  G1 E-110 F750
+  G90
+
+
+[gcode_macro RESUME_MACRO]
+gcode:
+  M117  RESUMING...
+  RESUME
+
+[gcode_macro PURGE]
+gcode:
+  SAVE_GCODE_STATE NAME=my_purge 
+  G91
+  G0 Z5 F300
+  G0 X1 F1000
+  G0 E50.0 F250
+  RESTORE_GCODE_STATE NAME=my_purge
+
+[gcode_macro purge_nozzle]
+gcode:
+  {% set wipe_count = 10 %}
+  SAVE_GCODE_STATE NAME=purge_nozzle_state
+  G90
+  G0 Z5 F300
+  {% for wipe in range(wipe_count) %}
+    {% for coordinate in [(209, 4),(160, 4)] %}
+      G0 X{coordinate[0]} Y{coordinate[1] + 0.25 * wipe} Z9.7 F1000 
+    {% endfor %}
+  {% endfor %}
+  RESTORE_GCODE_STATE NAME=purge_nozzle_state
+
+
+########################################################################################################################
+# TOOL / COLOR CHANGE
+#############################################################################################################################
+
+
+[gcode_macro T0]
+gcode:
+	SYNC_EXTRUDER_MOTION EXTRUDER="extruder" MOTION_QUEUE="extruder"
+	SYNC_EXTRUDER_MOTION EXTRUDER="extruder1" MOTION_QUEUE=""
+
+
+[gcode_macro T1]
+gcode:
+	SYNC_EXTRUDER_MOTION EXTRUDER="extruder" MOTION_QUEUE=""
+	SYNC_EXTRUDER_MOTION EXTRUDER="extruder1" MOTION_QUEUE="extruder"
+
+#*# <---------------------- SAVE_CONFIG ---------------------->
+#*# DO NOT EDIT THIS BLOCK OR BELOW. The contents are auto-generated.
+#*#
+#*# [extruder]
+#*# control = pid
+#*# pid_kp = 23.666
+#*# pid_ki = 0.609
+#*# pid_kd = 229.859
+#*#
+#*# [heater_bed]
+#*# control = pid
+#*# pid_kp = 71.025
+#*# pid_ki = 1.283
+#*# pid_kd = 982.815
+#*#
+#*# [bed_mesh default]
+#*# version = 1
+#*# points =
+#*# 	  -0.809906, -0.297984, 0.152813, 0.557766
+#*# 	  -0.659641, -0.203750, 0.269969, 0.695297
+#*# 	  -0.669828, -0.303078, 0.236859, 0.725859
+#*# 	  -0.952531, -0.394766, 0.094234, 0.506828
+#*# x_count = 4
+#*# y_count = 4
+#*# mesh_x_pps = 2
+#*# mesh_y_pps = 2
+#*# algo = bicubic
+#*# tension = 0.2
+#*# min_x = 30.0
+#*# max_x = 189.99
+#*# min_y = 30.0
+#*# max_y = 189.99
+#*#
+#*# [bltouch]
+#*# z_offset = 2.45
